@@ -13,7 +13,7 @@ Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organiz
 ## 3. Estructura del Repositorio
 
 ```
-aws101/
+AWS-ToolKit101/
 ├── README.md
 ├── Data/
 │   ├── README.md
