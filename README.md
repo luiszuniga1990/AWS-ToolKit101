@@ -2,7 +2,7 @@
 
 ## 1. Descripción del Repositorio
 
-Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organizado en tres pilares fundamentales: Data, Inteligencia Artificial y Seguridad. Cada módulo contiene guías, templates de infraestructura y playbooks paso a paso para implementaciones en la nube de AWS.
+Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organizado en tres pilares fundamentales: Data, Inteligencia Artificial y Seguridad. Cada módulo contiene guías, templates de infraestructura y playbooks paso a paso para implementaciones en la nube de AWS. Los deploys se realizan mediante templates YAML (CloudFormation) e incluyen playbooks step by step para tener una experiencia completa de deploy de principio a fin.
 
 ## 2. Público Objetivo
 
