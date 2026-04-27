@@ -1,8 +1,8 @@
-# Playbook: Deploy de Data Processing Pipeline
+# Playbook: Data Processing Pipeline Deployment
 
-Guía paso a paso para desplegar el pipeline serverless de procesamiento de datos JSON en AWS.
+Step-by-step guide to deploy the serverless JSON data processing pipeline on AWS.
 
-## Arquitectura
+## Architecture
 
 ```
 S3 (raw JSON) → AWS Glue Job → Parquet → Athena → Amazon QuickSight (2 dashboards)
@@ -10,30 +10,30 @@ S3 (raw JSON) → AWS Glue Job → Parquet → Athena → Amazon QuickSight (2 d
 
 ---
 
-## Pre-requisitos
+## Prerequisites
 
-- [ ] AWS CLI instalado y configurado con credenciales válidas
-- [ ] Permisos IAM para CloudFormation, S3, Glue, Athena y QuickSight
-- [ ] Amazon QuickSight suscrito y configurado (ver `data-processing/quick-setup.md`)
-- [ ] Obtener tu QuickSight User ARN:
+- [ ] AWS CLI installed and configured with valid credentials
+- [ ] IAM permissions for CloudFormation, S3, Glue, Athena, and QuickSight
+- [ ] Amazon QuickSight subscribed and configured (see `quick-setup.md`)
+- [ ] Obtain your QuickSight User ARN:
 
 ```bash
 aws quicksight list-users \
-  --aws-account-id TU_ACCOUNT_ID \
+  --aws-account-id YOUR_ACCOUNT_ID \
   --namespace default \
   --region us-east-1
 ```
 
 ---
 
-## Paso 1: Clonar el repositorio
+## Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/luiszuniga1990/AWS-ToolKit101.git
 cd AWS-ToolKit101/Data/data-processing
 ```
 
-## Paso 2: Desplegar el stack de CloudFormation
+## Step 2: Deploy the CloudFormation Stack
 
 ```bash
 aws cloudformation create-stack \
@@ -41,12 +41,12 @@ aws cloudformation create-stack \
   --template-body file://data-processing-template.yaml \
   --parameters \
     ParameterKey=ProjectName,ParameterValue=data-processing \
-    ParameterKey=QuickSightUserArn,ParameterValue=arn:aws:quicksight:us-east-1:TU_ACCOUNT_ID:user/default/TU_USUARIO \
+    ParameterKey=QuickSightUserArn,ParameterValue=arn:aws:quicksight:us-east-1:YOUR_ACCOUNT_ID:user/default/YOUR_USERNAME \
   --capabilities CAPABILITY_NAMED_IAM \
   --region us-east-1
 ```
 
-## Paso 3: Verificar que el stack se creó correctamente
+## Step 3: Verify Stack Creation
 
 ```bash
 aws cloudformation describe-stacks \
@@ -55,25 +55,25 @@ aws cloudformation describe-stacks \
   --region us-east-1
 ```
 
-Esperar hasta que el estado sea `CREATE_COMPLETE`.
+Wait until the status is `CREATE_COMPLETE`.
 
-## Paso 4: Subir el script de Glue al bucket
+## Step 4: Upload the Glue Script
 
 ```bash
 aws s3 cp glue-job-script.py \
-  s3://data-processing-glue-scripts-TU_ACCOUNT_ID/glue-job-script.py \
+  s3://data-processing-glue-scripts-YOUR_ACCOUNT_ID/glue-job-script.py \
   --region us-east-1
 ```
 
-## Paso 5: Subir los datos de ejemplo a S3
+## Step 5: Upload Sample Data to S3
 
 ```bash
 aws s3 cp sample-data/ \
-  s3://data-processing-raw-data-TU_ACCOUNT_ID/ \
+  s3://data-processing-raw-data-YOUR_ACCOUNT_ID/ \
   --recursive --region us-east-1
 ```
 
-## Paso 6: Ejecutar el Glue Job
+## Step 6: Run the Glue Job
 
 ```bash
 aws glue start-job-run \
@@ -81,47 +81,47 @@ aws glue start-job-run \
   --region us-east-1
 ```
 
-## Paso 7: Verificar la ejecución del Job
+## Step 7: Verify Job Execution
 
 ```bash
 aws glue get-job-run \
   --job-name data-processing-json-processor \
-  --run-id TU_RUN_ID \
+  --run-id YOUR_RUN_ID \
   --region us-east-1
 ```
 
-Esperar hasta que el estado sea `SUCCEEDED`.
+Wait until the status is `SUCCEEDED`.
 
-## Paso 8: Consultar datos en Athena
+## Step 8: Query Data with Athena
 
 ```sql
--- Ver registros procesados
+-- View processed records
 SELECT * FROM data_processing_database.processed_data LIMIT 20;
 
--- Resumen por categoría
+-- Summary by category
 SELECT category, COUNT(*) as total, SUM(amount) as total_amount
 FROM data_processing_database.processed_data
 GROUP BY category;
 ```
 
-## Paso 9: Verificar dashboards en QuickSight
+## Step 9: Verify QuickSight Dashboards
 
-1. Ir a la consola de Amazon QuickSight en `us-east-1`
-2. Verificar que existan los 2 dashboards:
-   - **General Summary** — Vista consolidada
-   - **Detail & Trends** — Análisis detallado con tendencias
+1. Navigate to the Amazon QuickSight console in `us-east-1`
+2. Confirm that both dashboards are available:
+   - **General Summary** — Consolidated overview
+   - **Detail & Trends** — Detailed analysis with time-based trends
 
 ---
 
-## Limpieza (cuando ya no se necesite)
+## Cleanup (When No Longer Needed)
 
 ```bash
-# Vaciar buckets
-aws s3 rm s3://data-processing-raw-data-TU_ACCOUNT_ID --recursive --region us-east-1
-aws s3 rm s3://data-processing-glue-scripts-TU_ACCOUNT_ID --recursive --region us-east-1
-aws s3 rm s3://data-processing-athena-results-TU_ACCOUNT_ID --recursive --region us-east-1
+# Empty buckets
+aws s3 rm s3://data-processing-raw-data-YOUR_ACCOUNT_ID --recursive --region us-east-1
+aws s3 rm s3://data-processing-glue-scripts-YOUR_ACCOUNT_ID --recursive --region us-east-1
+aws s3 rm s3://data-processing-athena-results-YOUR_ACCOUNT_ID --recursive --region us-east-1
 
-# Eliminar el stack
+# Delete the stack
 aws cloudformation delete-stack \
   --stack-name data-processing-stack \
   --region us-east-1
@@ -129,4 +129,4 @@ aws cloudformation delete-stack \
 
 ---
 
-> 💡 **Nota:** Reemplaza `TU_ACCOUNT_ID` y `TU_USUARIO` con tus valores reales de AWS en todos los comandos.
+> 💡 **Note:** Replace `YOUR_ACCOUNT_ID` and `YOUR_USERNAME` with your actual AWS values in all commands.

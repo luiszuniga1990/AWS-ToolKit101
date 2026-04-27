@@ -1,18 +1,18 @@
 # Data
 
-Módulo dedicado a samples y recursos prácticos sobre servicios de datos en AWS. Contiene templates de infraestructura, scripts ETL y guías de deploy para pipelines de procesamiento de datos en la nube.
+Module dedicated to samples and hands-on resources for AWS data services. It includes infrastructure templates, ETL scripts, and deployment guides for serverless data processing pipelines in the cloud.
 
-## Contenido
+## Contents
 
 ```
 Data/
 ├── README.md
 └── data-processing/
     ├── README.md
-    ├── PLAYBOOK.md                     ← Guía paso a paso de deploy
-    ├── quick-setup.md                  ← Setup de Amazon QuickSight
+    ├── PLAYBOOK.md                     ← Step-by-step deployment guide
+    ├── quick-setup.md                  ← Amazon QuickSight setup
     ├── data-processing-template.yaml   ← CloudFormation template
-    ├── glue-job-script.py              ← Script ETL (PySpark)
+    ├── glue-job-script.py              ← ETL script (PySpark)
     ├── LICENSE
     └── sample-data/
         ├── sample-001.json
@@ -20,8 +20,8 @@ Data/
         └── sample-003.json
 ```
 
-## Público Objetivo
+## Target Audience
 
-- Ingenieros de datos que buscan patrones de pipelines serverless en AWS
-- Desarrolladores que quieren aprender sobre S3, Glue, Athena y QuickSight
-- Equipos que necesitan templates listos para procesamiento de datos JSON a Parquet
+- Data engineers looking for serverless pipeline patterns on AWS
+- Developers who want to learn about S3, Glue, Athena, and QuickSight
+- Teams that need ready-to-use templates for JSON-to-Parquet data processing

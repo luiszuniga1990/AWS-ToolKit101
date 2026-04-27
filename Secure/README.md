@@ -1,3 +1,3 @@
 # Secure
 
-🚧 **En proceso de deploy** — Creación muy pronto. Próximamente su liberación.
+🚧 **Deployment in progress** — Content creation underway. Release coming soon.

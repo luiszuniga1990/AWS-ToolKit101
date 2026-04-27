@@ -1,16 +1,16 @@
 # AWS ToolKit 101
 
-## 1. Descripción del Repositorio
+## 1. Repository Description
 
-Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organizado en tres pilares fundamentales: Data, Inteligencia Artificial y Seguridad. Cada módulo contiene guías, templates de infraestructura y playbooks paso a paso para implementaciones en la nube de AWS. Los deploys se realizan mediante templates YAML (CloudFormation) e incluyen playbooks step by step para tener una experiencia completa de deploy de principio a fin.
+A hands-on learning repository covering core AWS services, organized around three fundamental pillars: Data, Artificial Intelligence, and Security. Each module provides guides, infrastructure templates, and step-by-step playbooks for cloud deployments on AWS. All deployments are driven by YAML templates (CloudFormation) and include detailed playbooks to deliver a complete end-to-end deployment experience.
 
-## 2. Público Objetivo
+## 2. Target Audience
 
-- Desarrolladores que inician su camino en AWS
-- Ingenieros de datos, ML y seguridad que buscan referencias rápidas
-- Equipos DevOps y arquitectos cloud que necesitan patrones base
+- Developers beginning their journey with AWS
+- Data, ML, and security engineers looking for quick-reference patterns
+- DevOps teams and cloud architects seeking reusable baseline templates
 
-## 3. Estructura del Repositorio
+## 3. Repository Structure
 
 ```
 AWS-ToolKit101/
@@ -19,21 +19,21 @@ AWS-ToolKit101/
 │   ├── README.md
 │   └── data-processing/
 │       ├── README.md
-│       ├── PLAYBOOK.md                     ← Guía paso a paso de deploy
+│       ├── PLAYBOOK.md                     ← Step-by-step deployment guide
 │       ├── quick-setup.md
 │       ├── data-processing-template.yaml   ← CloudFormation template
-│       ├── glue-job-script.py              ← Script ETL (PySpark)
+│       ├── glue-job-script.py              ← ETL script (PySpark)
 │       ├── LICENSE
 │       └── sample-data/
 │           ├── sample-001.json
 │           ├── sample-002.json
 │           └── sample-003.json
 ├── IA/
-│   └── README.md                           ← Próximamente
+│   └── README.md                           ← Coming soon
 └── Secure/
-    └── README.md                           ← Próximamente
+    └── README.md                           ← Coming soon
 ```
 
 ---
 
-> 🚧 **Módulos IA y Secure** están en proceso de desarrollo. Próximamente se subirá contenido con templates, playbooks y guías prácticas para cada uno.
+> 🚧 **IA and Secure modules** are currently under development. Templates, playbooks, and practical guides for each module will be released soon.
