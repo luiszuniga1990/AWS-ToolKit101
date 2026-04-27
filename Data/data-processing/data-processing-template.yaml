@@ -1,0 +1,390 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Pipeline de datos JSON: S3 -> Glue Job (manual) -> Athena -> Amazon Quick (2 dashboards)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'data-processing'
+    Description: 'Nombre del proyecto para nombrar recursos'
+  QuickSightUserArn:
+    Type: String
+    Description: 'ARN del usuario Amazon Quick (prerequisito - debe existir previamente). Ejemplo: arn:aws:quicksight:us-east-1:ACCOUNT_ID:user/default/USUARIO'
+    AllowedPattern: '^arn:aws:quicksight:.+:.+:user/.+$'
+    ConstraintDescription: 'Debe ser un ARN valido de usuario Amazon Quick'
+
+Resources:
+  # ============================================
+  # S3 BUCKETS
+  # ============================================
+
+  # Bucket para archivos JSON raw (entrada del pipeline)
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-raw-data-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Bucket para scripts de Glue
+  GlueScriptsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-glue-scripts-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Bucket para resultados de Athena
+  AthenaResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-athena-results-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # ============================================
+  # GLUE (ETL - Ejecucion manual)
+  # ============================================
+
+  # IAM Role para Glue Job
+  GlueServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-glue-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub '${RawDataBucket.Arn}'
+                  - !Sub '${RawDataBucket.Arn}/*'
+                  - !Sub '${GlueScriptsBucket.Arn}'
+                  - !Sub '${GlueScriptsBucket.Arn}/*'
+
+  # Glue Database (catalogo de datos)
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Sub '${ProjectName}_database'
+        Description: 'Base de datos para archivos JSON procesados'
+
+  # Glue Job (ejecucion manual - no tiene trigger/schedule)
+  GlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: !Sub '${ProjectName}-json-processor'
+      Role: !GetAtt GlueServiceRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub 's3://${GlueScriptsBucket}/glue-job-script.py'
+        PythonVersion: '3'
+      DefaultArguments:
+        '--job-bookmark-option': 'job-bookmark-enable'
+        '--enable-metrics': 'true'
+        '--enable-continuous-cloudwatch-log': 'true'
+        '--SOURCE_BUCKET': !Ref RawDataBucket
+        '--DATABASE_NAME': !Ref GlueDatabase
+      MaxRetries: 1
+      Timeout: 60
+      GlueVersion: '4.0'
+      NumberOfWorkers: 2
+      WorkerType: G.1X
+
+  # ============================================
+  # ATHENA
+  # ============================================
+
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub '${ProjectName}-workgroup'
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${AthenaResultsBucket}/'
+        EnforceWorkGroupConfiguration: true
+        PublishCloudWatchMetricsEnabled: true
+
+  # ============================================
+  # AMAZON QUICK (QuickSight) - Prerequisito: cuenta Quick ya creada
+  # ============================================
+
+  # Data Source - Conexion de Amazon Quick a Athena
+  QuickDataSource:
+    Type: AWS::QuickSight::DataSource
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      DataSourceId: !Sub '${ProjectName}-athena-ds'
+      Name: !Sub '${ProjectName}-athena-datasource'
+      Type: ATHENA
+      DataSourceParameters:
+        AthenaParameters:
+          WorkGroup: !Ref AthenaWorkgroup
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeDataSource'
+            - 'quicksight:DescribeDataSourcePermissions'
+            - 'quicksight:PassDataSource'
+            - 'quicksight:UpdateDataSource'
+            - 'quicksight:DeleteDataSource'
+            - 'quicksight:UpdateDataSourcePermissions'
+
+  # DataSet - Tabla de datos procesados para visualizacion
+  QuickDataSet:
+    Type: AWS::QuickSight::DataSet
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      DataSetId: !Sub '${ProjectName}-processed-dataset'
+      Name: !Sub '${ProjectName}-processed-data'
+      ImportMode: SPICE
+      PhysicalTableMap:
+        ProcessedDataTable:
+          RelationalTable:
+            DataSourceArn: !GetAtt QuickDataSource.Arn
+            Catalog: 'AwsDataCatalog'
+            Schema: !Ref GlueDatabase
+            Name: 'processed_data'
+            InputColumns:
+              - Name: 'id'
+                Type: 'STRING'
+              - Name: 'data'
+                Type: 'STRING'
+              - Name: 'timestamp'
+                Type: 'STRING'
+              - Name: 'category'
+                Type: 'STRING'
+              - Name: 'amount'
+                Type: 'DECIMAL'
+              - Name: 'region'
+                Type: 'STRING'
+              - Name: 'status'
+                Type: 'STRING'
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeDataSet'
+            - 'quicksight:DescribeDataSetPermissions'
+            - 'quicksight:PassDataSet'
+            - 'quicksight:DescribeIngestion'
+            - 'quicksight:ListIngestions'
+            - 'quicksight:UpdateDataSet'
+            - 'quicksight:DeleteDataSet'
+            - 'quicksight:CreateIngestion'
+            - 'quicksight:CancelIngestion'
+            - 'quicksight:UpdateDataSetPermissions'
+
+  # Panel 1 - Dashboard de resumen general de datos procesados
+  QuickAnalysis1:
+    Type: AWS::QuickSight::Analysis
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      AnalysisId: !Sub '${ProjectName}-summary-analysis'
+      Name: !Sub '${ProjectName} - Resumen General'
+      Definition:
+        DataSetIdentifierDeclarations:
+          - Identifier: 'processed-data'
+            DataSetArn: !GetAtt QuickDataSet.Arn
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeAnalysis'
+            - 'quicksight:UpdateAnalysis'
+            - 'quicksight:DeleteAnalysis'
+            - 'quicksight:QueryAnalysis'
+            - 'quicksight:DescribeAnalysisPermissions'
+            - 'quicksight:UpdateAnalysisPermissions'
+
+  QuickDashboard1:
+    Type: AWS::QuickSight::Dashboard
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      DashboardId: !Sub '${ProjectName}-summary-dashboard'
+      Name: !Sub '${ProjectName} - Dashboard Resumen General'
+      SourceEntity:
+        SourceTemplate:
+          Arn: !Sub 'arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:analysis/${ProjectName}-summary-analysis'
+          DataSetReferences:
+            - DataSetPlaceholder: 'processed-data'
+              DataSetArn: !GetAtt QuickDataSet.Arn
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeDashboard'
+            - 'quicksight:ListDashboardVersions'
+            - 'quicksight:UpdateDashboardPermissions'
+            - 'quicksight:QueryDashboard'
+            - 'quicksight:UpdateDashboard'
+            - 'quicksight:DeleteDashboard'
+            - 'quicksight:UpdateDashboardPublishedVersion'
+            - 'quicksight:DescribeDashboardPermissions'
+
+  # Panel 2 - Dashboard de detalle y tendencias
+  QuickAnalysis2:
+    Type: AWS::QuickSight::Analysis
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      AnalysisId: !Sub '${ProjectName}-detail-analysis'
+      Name: !Sub '${ProjectName} - Detalle y Tendencias'
+      Definition:
+        DataSetIdentifierDeclarations:
+          - Identifier: 'processed-data'
+            DataSetArn: !GetAtt QuickDataSet.Arn
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeAnalysis'
+            - 'quicksight:UpdateAnalysis'
+            - 'quicksight:DeleteAnalysis'
+            - 'quicksight:QueryAnalysis'
+            - 'quicksight:DescribeAnalysisPermissions'
+            - 'quicksight:UpdateAnalysisPermissions'
+
+  QuickDashboard2:
+    Type: AWS::QuickSight::Dashboard
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      DashboardId: !Sub '${ProjectName}-detail-dashboard'
+      Name: !Sub '${ProjectName} - Dashboard Detalle y Tendencias'
+      SourceEntity:
+        SourceTemplate:
+          Arn: !Sub 'arn:aws:quicksight:${AWS::Region}:${AWS::AccountId}:analysis/${ProjectName}-detail-analysis'
+          DataSetReferences:
+            - DataSetPlaceholder: 'processed-data'
+              DataSetArn: !GetAtt QuickDataSet.Arn
+      Permissions:
+        - Principal: !Ref QuickSightUserArn
+          Actions:
+            - 'quicksight:DescribeDashboard'
+            - 'quicksight:ListDashboardVersions'
+            - 'quicksight:UpdateDashboardPermissions'
+            - 'quicksight:QueryDashboard'
+            - 'quicksight:UpdateDashboard'
+            - 'quicksight:DeleteDashboard'
+            - 'quicksight:UpdateDashboardPublishedVersion'
+            - 'quicksight:DescribeDashboardPermissions'
+
+  # IAM Policy para Amazon Quick - acceso a Athena y S3
+  QuickAthenaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub '${ProjectName}-quick-athena-policy'
+      Description: 'Permisos para Amazon Quick acceder a Athena, Glue Catalog y S3'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'athena:BatchGetQueryExecution'
+              - 'athena:GetQueryExecution'
+              - 'athena:GetQueryResults'
+              - 'athena:GetWorkGroup'
+              - 'athena:StartQueryExecution'
+              - 'athena:StopQueryExecution'
+            Resource:
+              - !Sub 'arn:aws:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroup}'
+          - Effect: Allow
+            Action:
+              - 'glue:GetDatabase'
+              - 'glue:GetDatabases'
+              - 'glue:GetTable'
+              - 'glue:GetTables'
+              - 'glue:GetPartition'
+              - 'glue:GetPartitions'
+            Resource:
+              - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog'
+              - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDatabase}'
+              - !Sub 'arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDatabase}/*'
+          - Effect: Allow
+            Action:
+              - 's3:GetObject'
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Resource:
+              - !Sub '${RawDataBucket.Arn}'
+              - !Sub '${RawDataBucket.Arn}/*'
+              - !Sub '${AthenaResultsBucket.Arn}'
+              - !Sub '${AthenaResultsBucket.Arn}/*'
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+            Resource:
+              - !Sub '${AthenaResultsBucket.Arn}/*'
+
+Outputs:
+  RawDataBucketName:
+    Description: 'Bucket S3 para subir archivos JSON raw'
+    Value: !Ref RawDataBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-RawDataBucket'
+
+  GlueScriptsBucketName:
+    Description: 'Bucket para scripts de Glue'
+    Value: !Ref GlueScriptsBucket
+
+  GlueDatabaseName:
+    Description: 'Nombre de la base de datos Glue'
+    Value: !Ref GlueDatabase
+    Export:
+      Name: !Sub '${AWS::StackName}-GlueDatabase'
+
+  GlueJobName:
+    Description: 'Nombre del Glue Job (ejecucion manual)'
+    Value: !Ref GlueJob
+
+  AthenaWorkgroupName:
+    Description: 'Nombre del Athena Workgroup'
+    Value: !Ref AthenaWorkgroup
+
+  AthenaResultsBucketName:
+    Description: 'Bucket para resultados de Athena'
+    Value: !Ref AthenaResultsBucket
+
+  QuickDataSourceArn:
+    Description: 'ARN del Data Source de Amazon Quick'
+    Value: !GetAtt QuickDataSource.Arn
+
+  QuickDataSetArn:
+    Description: 'ARN del DataSet de Amazon Quick'
+    Value: !GetAtt QuickDataSet.Arn
+
+  SummaryDashboardId:
+    Description: 'ID del Dashboard de Resumen General'
+    Value: !Sub '${ProjectName}-summary-dashboard'
+
+  DetailDashboardId:
+    Description: 'ID del Dashboard de Detalle y Tendencias'
+    Value: !Sub '${ProjectName}-detail-dashboard'
+
+  QuickPolicyArn:
+    Description: 'ARN de la politica IAM para Amazon Quick'
+    Value: !Ref QuickAthenaPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-QuickPolicy'

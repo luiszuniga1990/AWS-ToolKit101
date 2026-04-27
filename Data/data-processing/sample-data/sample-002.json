@@ -1,0 +1,5 @@
+{"id": "TXN-006", "data": "Venta de producto E - 300 unidades", "timestamp": "2026-03-16T09:00:00Z", "category": "ventas", "amount": 9000.00, "region": "us-east-1", "status": "completed"}
+{"id": "TXN-007", "data": "Venta de producto B - 120 unidades", "timestamp": "2026-03-16T10:30:00Z", "category": "ventas", "amount": 3600.00, "region": "eu-west-1", "status": "completed"}
+{"id": "TXN-008", "data": "Devolucion producto A - 10 unidades", "timestamp": "2026-03-16T11:45:00Z", "category": "devoluciones", "amount": -300.00, "region": "us-west-2", "status": "processed"}
+{"id": "TXN-009", "data": "Venta de producto F - 75 unidades", "timestamp": "2026-03-16T13:15:00Z", "category": "ventas", "amount": 2250.00, "region": "us-east-1", "status": "completed"}
+{"id": "TXN-010", "data": "Venta de producto D - 180 unidades", "timestamp": "2026-03-16T15:00:00Z", "category": "ventas", "amount": 5400.00, "region": "ap-southeast-1", "status": "pending"}
