@@ -16,7 +16,17 @@ Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organiz
 aws101/
 ├── README.md
 ├── Data/
-│   └── README.md
+│   ├── README.md
+│   └── data-processing/
+│       ├── README.md
+│       ├── quick-setup.md
+│       ├── data-processing-template.yaml
+│       ├── glue-job-script.py
+│       ├── LICENSE
+│       └── sample-data/
+│           ├── sample-001.json
+│           ├── sample-002.json
+│           └── sample-003.json
 ├── IA/
 │   └── README.md
 └── Secure/
