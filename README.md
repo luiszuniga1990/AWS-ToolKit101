@@ -1,8 +1,8 @@
-# AWS 101
+# AWS ToolKit 101
 
 ## 1. Descripción del Repositorio
 
-Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organizado en tres pilares fundamentales: Data, Inteligencia Artificial y Seguridad. Cada módulo contiene guías, ejemplos y buenas prácticas para implementaciones en la nube de AWS.
+Repositorio de aprendizaje y recursos prácticos sobre servicios de AWS, organizado en tres pilares fundamentales: Data, Inteligencia Artificial y Seguridad. Cada módulo contiene guías, templates de infraestructura y playbooks paso a paso para implementaciones en la nube de AWS.
 
 ## 2. Público Objetivo
 
@@ -17,18 +17,23 @@ aws101/
 ├── README.md
 ├── Data/
 │   ├── README.md
+│   ├── PLAYBOOK.md                         ← Guía paso a paso de deploy
 │   └── data-processing/
 │       ├── README.md
 │       ├── quick-setup.md
-│       ├── data-processing-template.yaml
-│       ├── glue-job-script.py
+│       ├── data-processing-template.yaml   ← CloudFormation template
+│       ├── glue-job-script.py              ← Script ETL (PySpark)
 │       ├── LICENSE
 │       └── sample-data/
 │           ├── sample-001.json
 │           ├── sample-002.json
 │           └── sample-003.json
 ├── IA/
-│   └── README.md
+│   └── README.md                           ← Próximamente
 └── Secure/
-    └── README.md
+    └── README.md                           ← Próximamente
 ```
+
+---
+
+> 🚧 **Módulos IA y Secure** están en proceso de desarrollo. Próximamente se subirá contenido con templates, playbooks y guías prácticas para cada uno.
