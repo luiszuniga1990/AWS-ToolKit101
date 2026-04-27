@@ -17,9 +17,9 @@ aws101/
 ├── README.md
 ├── Data/
 │   ├── README.md
-│   ├── PLAYBOOK.md                         ← Guía paso a paso de deploy
 │   └── data-processing/
 │       ├── README.md
+│       ├── PLAYBOOK.md                     ← Guía paso a paso de deploy
 │       ├── quick-setup.md
 │       ├── data-processing-template.yaml   ← CloudFormation template
 │       ├── glue-job-script.py              ← Script ETL (PySpark)
