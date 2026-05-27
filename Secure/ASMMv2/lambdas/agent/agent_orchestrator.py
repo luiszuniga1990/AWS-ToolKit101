@@ -2,7 +2,7 @@ import json
 import boto3
 import os
 
-MODEL_ID = os.environ.get('MODEL_ID', 'anthropic.claude-sonnet-4-20250514-v1:0')
+MODEL_ID = os.environ.get('MODEL_ID', 'amazon.nova-pro-v1:0')
 
 MATURITY_PHASES = {
     'QUICK_WINS': {
@@ -106,20 +106,19 @@ Responde en español. Incluye:
 
 
 def invoke_model(bedrock, prompt):
-    """Invoca el modelo de Bedrock."""
+    """Invoca el modelo de Bedrock (Amazon Nova Pro)."""
     try:
         resp = bedrock.invoke_model(
             modelId=MODEL_ID,
             contentType='application/json',
             accept='application/json',
             body=json.dumps({
-                'anthropic_version': 'bedrock-2023-05-31',
-                'max_tokens': 4096,
-                'messages': [{'role': 'user', 'content': prompt}]
+                'inferenceConfig': {'max_new_tokens': 4096},
+                'messages': [{'role': 'user', 'content': [{'text': prompt}]}]
             })
         )
         result = json.loads(resp['body'].read())
-        return result['content'][0]['text']
+        return result['output']['message']['content'][0]['text']
     except Exception as e:
         return f'Error invocando modelo: {str(e)}'
 

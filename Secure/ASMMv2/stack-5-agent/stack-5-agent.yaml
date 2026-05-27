@@ -12,7 +12,7 @@ Parameters:
     AllowedValues: [dev, staging, prod]
   FoundationModelId:
     Type: String
-    Default: anthropic.claude-sonnet-4-20250514-v1:0
+    Default: amazon.nova-pro-v1:0
   VpcSubnetIds:
     Type: CommaDelimitedList
     Description: Subnet IDs for Lambda VPC configuration
