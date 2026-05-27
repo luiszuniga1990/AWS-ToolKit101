@@ -10,17 +10,47 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, staging, prod]
+  VpcSubnetIds:
+    Type: CommaDelimitedList
+    Description: Subnet IDs for Lambda VPC configuration
+  VpcSecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security Group IDs for Lambda VPC configuration
+  KmsKeyArn:
+    Type: String
+    Description: KMS Key ARN for encrypting Lambda environment variables
 
 Globals:
   Function:
     Runtime: python3.12
     Timeout: 30
     MemorySize: 256
+    ReservedConcurrentExecutions: 10
+    KmsKeyArn: !Ref KmsKeyArn
+    VpcConfig:
+      SubnetIds: !Ref VpcSubnetIds
+      SecurityGroupIds: !Ref VpcSecurityGroupIds
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
 
 Resources:
+  # DLQ for failed Lambda invocations
+  ValidationDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${ProjectName}-${Environment}-validation-dlq'
+      MessageRetentionPeriod: 1209600
+      KmsMasterKeyId: !Ref KmsKeyArn
+
+  # API Gateway Access Log Group
+  ValidationApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${ProjectName}-${Environment}-validation'
+      RetentionInDays: 30
+      KmsKeyId: !Ref KmsKeyArn
+
   ValidationApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -37,6 +67,9 @@ Resources:
       ApiId: !Ref ValidationApi
       StageName: !Ref Environment
       AutoDeploy: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt ValidationApiLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","method":"$context.httpMethod","path":"$context.path","status":"$context.status"}'
 
   # Lambda 1: Validar que las credenciales son válidas (conexión STS)
   ValidateCredentialsFunction:
@@ -46,6 +79,9 @@ Resources:
       Handler: validate_credentials.handler
       CodeUri: ./lambdas/validation/
       Description: Valida que las credenciales AWS son válidas via STS GetCallerIdentity
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ValidationDLQ.Arn
 
   ValidateCredentialsIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -78,6 +114,9 @@ Resources:
       Handler: validate_readonly.handler
       CodeUri: ./lambdas/validation/
       Description: Verifica que las credenciales solo tienen políticas de lectura
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ValidationDLQ.Arn
 
   ValidateReadOnlyIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -110,6 +149,9 @@ Resources:
       Handler: validate_connection.handler
       CodeUri: ./lambdas/validation/
       Description: Orquesta validación completa - credenciales válidas + solo lectura
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ValidationDLQ.Arn
 
   ValidateConnectionIntegration:
     Type: AWS::ApiGatewayV2::Integration

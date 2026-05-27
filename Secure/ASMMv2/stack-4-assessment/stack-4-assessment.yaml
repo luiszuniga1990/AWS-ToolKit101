@@ -10,17 +10,47 @@ Parameters:
     Type: String
     Default: dev
     AllowedValues: [dev, staging, prod]
+  VpcSubnetIds:
+    Type: CommaDelimitedList
+    Description: Subnet IDs for Lambda VPC configuration
+  VpcSecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security Group IDs for Lambda VPC configuration
+  KmsKeyArn:
+    Type: String
+    Description: KMS Key ARN for encrypting Lambda environment variables
 
 Globals:
   Function:
     Runtime: python3.12
     Timeout: 120
     MemorySize: 512
+    ReservedConcurrentExecutions: 10
+    KmsKeyArn: !Ref KmsKeyArn
+    VpcConfig:
+      SubnetIds: !Ref VpcSubnetIds
+      SecurityGroupIds: !Ref VpcSecurityGroupIds
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
 
 Resources:
+  # DLQ for failed Lambda invocations
+  AssessmentDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${ProjectName}-${Environment}-assessment-dlq'
+      MessageRetentionPeriod: 1209600
+      KmsMasterKeyId: !Ref KmsKeyArn
+
+  # API Gateway Access Log Group
+  AssessmentApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${ProjectName}-${Environment}-assessment'
+      RetentionInDays: 30
+      KmsKeyId: !Ref KmsKeyArn
+
   AssessmentApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -37,6 +67,9 @@ Resources:
       ApiId: !Ref AssessmentApi
       StageName: !Ref Environment
       AutoDeploy: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt AssessmentApiLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","method":"$context.httpMethod","path":"$context.path","status":"$context.status"}'
 
   # Lambda 1: Assessment IAM & Identity
   AssessIamFunction:
@@ -46,6 +79,9 @@ Resources:
       Handler: assess_iam.handler
       CodeUri: ./lambdas/assessment/
       Description: Analiza IAM - usuarios, roles, políticas, MFA, access keys
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt AssessmentDLQ.Arn
 
   AssessIamIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -78,6 +114,9 @@ Resources:
       Handler: assess_logging.handler
       CodeUri: ./lambdas/assessment/
       Description: Analiza CloudTrail, Config, CloudWatch - logging y monitoreo
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt AssessmentDLQ.Arn
 
   AssessLoggingIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -110,6 +149,9 @@ Resources:
       Handler: assess_detection.handler
       CodeUri: ./lambdas/assessment/
       Description: Analiza GuardDuty, Security Hub, detección de amenazas
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt AssessmentDLQ.Arn
 
   AssessDetectionIntegration:
     Type: AWS::ApiGatewayV2::Integration

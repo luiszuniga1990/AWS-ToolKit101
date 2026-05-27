@@ -13,6 +13,15 @@ Parameters:
   FoundationModelId:
     Type: String
     Default: anthropic.claude-sonnet-4-20250514-v1:0
+  VpcSubnetIds:
+    Type: CommaDelimitedList
+    Description: Subnet IDs for Lambda VPC configuration
+  VpcSecurityGroupIds:
+    Type: CommaDelimitedList
+    Description: Security Group IDs for Lambda VPC configuration
+  KmsKeyArn:
+    Type: String
+    Description: KMS Key ARN for encrypting Lambda environment variables
 
 Resources:
   # Knowledge Base con el AWS Security Maturity Model v2
@@ -20,11 +29,49 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub '${ProjectName}-${Environment}-kb-docs'
+      VersioningConfiguration:
+        Status: Enabled
+      LoggingConfiguration:
+        DestinationBucketName: !Ref KBLogsBucket
+        LogFilePrefix: kb-access-logs/
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+
+  KBLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-kb-logs'
+      VersioningConfiguration:
+        Status: Enabled
+      LoggingConfiguration:
+        LogFilePrefix: self-logs/
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+
+  # DLQ for failed Lambda invocations
+  AgentDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${ProjectName}-${Environment}-agent-dlq'
+      MessageRetentionPeriod: 1209600
+      KmsMasterKeyId: !Ref KmsKeyArn
+
+  # API Gateway Access Log Group
+  AgentApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${ProjectName}-${Environment}-agent'
+      RetentionInDays: 30
+      KmsKeyId: !Ref KmsKeyArn
 
   # Rol del Agente
   AgentRole:
@@ -68,8 +115,16 @@ Resources:
       Runtime: python3.12
       Timeout: 300
       MemorySize: 1024
+      ReservedConcurrentExecutions: 10
+      KmsKeyArn: !Ref KmsKeyArn
       CodeUri: ./lambdas/agent/
       Description: Orquesta el agente - recibe resultados del assessment y genera recomendaciones
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt AgentDLQ.Arn
+      VpcConfig:
+        SubnetIds: !Ref VpcSubnetIds
+        SecurityGroupIds: !Ref VpcSecurityGroupIds
       Environment:
         Variables:
           ENVIRONMENT: !Ref Environment
@@ -107,6 +162,9 @@ Resources:
       ApiId: !Ref AgentApi
       StageName: !Ref Environment
       AutoDeploy: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt AgentApiLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","method":"$context.httpMethod","path":"$context.path","status":"$context.status"}'
 
   AgentOrchestratorIntegration:
     Type: AWS::ApiGatewayV2::Integration
