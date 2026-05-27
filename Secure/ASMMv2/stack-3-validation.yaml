@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'ASMMv2 - Stack 3: Validation Lambdas'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: asmmv2
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  ValidationApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-validation-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: ['Content-Type', 'Authorization']
+
+  ValidationApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ValidationApi
+      StageName: !Ref Environment
+      AutoDeploy: true
+
+  # Lambda 1: Validar que las credenciales son válidas (conexión STS)
+  ValidateCredentialsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-validate-credentials'
+      Handler: validate_credentials.handler
+      CodeUri: ./lambdas/validation/
+      Description: Valida que las credenciales AWS son válidas via STS GetCallerIdentity
+
+  ValidateCredentialsIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ValidationApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ValidateCredentialsFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  ValidateCredentialsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ValidationApi
+      RouteKey: POST /validate-credentials
+      Target: !Sub 'integrations/${ValidateCredentialsIntegration}'
+
+  ValidateCredentialsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ValidateCredentialsFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ValidationApi}/*/*'
+
+  # Lambda 2: Validar que el usuario tiene SOLO permisos de lectura
+  ValidateReadOnlyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-validate-readonly'
+      Handler: validate_readonly.handler
+      CodeUri: ./lambdas/validation/
+      Description: Verifica que las credenciales solo tienen políticas de lectura
+
+  ValidateReadOnlyIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ValidationApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ValidateReadOnlyFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  ValidateReadOnlyRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ValidationApi
+      RouteKey: POST /validate-readonly
+      Target: !Sub 'integrations/${ValidateReadOnlyIntegration}'
+
+  ValidateReadOnlyPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ValidateReadOnlyFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ValidationApi}/*/*'
+
+  # Lambda 3: Validación completa (orquesta las dos anteriores)
+  ValidateConnectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-validate-connection'
+      Handler: validate_connection.handler
+      CodeUri: ./lambdas/validation/
+      Description: Orquesta validación completa - credenciales válidas + solo lectura
+
+  ValidateConnectionIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ValidationApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ValidateConnectionFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  ValidateConnectionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ValidationApi
+      RouteKey: POST /validate
+      Target: !Sub 'integrations/${ValidateConnectionIntegration}'
+
+  ValidateConnectionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ValidateConnectionFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ValidationApi}/*/*'
+
+Outputs:
+  ValidationApiUrl:
+    Value: !Sub 'https://${ValidationApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-ValidationApiUrl'

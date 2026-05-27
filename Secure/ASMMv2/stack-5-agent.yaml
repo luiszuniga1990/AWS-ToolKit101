@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'ASMMv2 - Stack 5: Agent (Bedrock AgentCore)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: asmmv2
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  FoundationModelId:
+    Type: String
+    Default: anthropic.claude-sonnet-4-20250514-v1:0
+
+Resources:
+  # Knowledge Base con el AWS Security Maturity Model v2
+  KnowledgeBaseBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${ProjectName}-${Environment}-kb-docs'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Rol del Agente
+  AgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-agent-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: BedrockInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${FoundationModelId}'
+        - PolicyName: KBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt KnowledgeBaseBucket.Arn
+                  - !Sub '${KnowledgeBaseBucket.Arn}/*'
+
+  # Lambda de orquestación - conecta assessment results con el agente
+  AgentOrchestratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-agent-orchestrator'
+      Handler: agent_orchestrator.handler
+      Runtime: python3.12
+      Timeout: 300
+      MemorySize: 1024
+      CodeUri: ./lambdas/agent/
+      Description: Orquesta el agente - recibe resultados del assessment y genera recomendaciones
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          MODEL_ID: !Ref FoundationModelId
+          KB_BUCKET: !Ref KnowledgeBaseBucket
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeAgent
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt KnowledgeBaseBucket.Arn
+                - !Sub '${KnowledgeBaseBucket.Arn}/*'
+
+  AgentApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-agent-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: ['Content-Type', 'Authorization']
+
+  AgentApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref AgentApi
+      StageName: !Ref Environment
+      AutoDeploy: true
+
+  AgentOrchestratorIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref AgentApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt AgentOrchestratorFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  AgentOrchestratorRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref AgentApi
+      RouteKey: POST /chat
+      Target: !Sub 'integrations/${AgentOrchestratorIntegration}'
+
+  AgentOrchestratorPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AgentOrchestratorFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AgentApi}/*/*'
+
+Outputs:
+  AgentApiUrl:
+    Value: !Sub 'https://${AgentApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-AgentApiUrl'
+  KnowledgeBaseBucketName:
+    Value: !Ref KnowledgeBaseBucket
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-KBBucket'

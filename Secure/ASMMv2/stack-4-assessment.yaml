@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'ASMMv2 - Stack 4: Assessment Lambdas'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: asmmv2
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 120
+    MemorySize: 512
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  AssessmentApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-assessment-api'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: ['Content-Type', 'Authorization']
+
+  AssessmentApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref AssessmentApi
+      StageName: !Ref Environment
+      AutoDeploy: true
+
+  # Lambda 1: Assessment IAM & Identity
+  AssessIamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-assess-iam'
+      Handler: assess_iam.handler
+      CodeUri: ./lambdas/assessment/
+      Description: Analiza IAM - usuarios, roles, políticas, MFA, access keys
+
+  AssessIamIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref AssessmentApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt AssessIamFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  AssessIamRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref AssessmentApi
+      RouteKey: POST /assess-iam
+      Target: !Sub 'integrations/${AssessIamIntegration}'
+
+  AssessIamPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AssessIamFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AssessmentApi}/*/*'
+
+  # Lambda 2: Assessment Logging & Monitoring
+  AssessLoggingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-assess-logging'
+      Handler: assess_logging.handler
+      CodeUri: ./lambdas/assessment/
+      Description: Analiza CloudTrail, Config, CloudWatch - logging y monitoreo
+
+  AssessLoggingIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref AssessmentApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt AssessLoggingFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  AssessLoggingRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref AssessmentApi
+      RouteKey: POST /assess-logging
+      Target: !Sub 'integrations/${AssessLoggingIntegration}'
+
+  AssessLoggingPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AssessLoggingFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AssessmentApi}/*/*'
+
+  # Lambda 3: Assessment Detection & Response
+  AssessDetectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-assess-detection'
+      Handler: assess_detection.handler
+      CodeUri: ./lambdas/assessment/
+      Description: Analiza GuardDuty, Security Hub, detección de amenazas
+
+  AssessDetectionIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref AssessmentApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt AssessDetectionFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  AssessDetectionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref AssessmentApi
+      RouteKey: POST /assess-detection
+      Target: !Sub 'integrations/${AssessDetectionIntegration}'
+
+  AssessDetectionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AssessDetectionFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AssessmentApi}/*/*'
+
+Outputs:
+  AssessmentApiUrl:
+    Value: !Sub 'https://${AssessmentApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-AssessmentApiUrl'

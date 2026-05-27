@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASMMv2 - AWS Security Maturity Model Agent</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        h1 { color: #58a6ff; margin-bottom: 0.5rem; }
+        .subtitle { color: #8b949e; margin-bottom: 2rem; }
+
+        /* Login */
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 2rem; margin-bottom: 1.5rem; }
+        .card h2 { color: #f0f6fc; margin-bottom: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #8b949e; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.75rem; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 1rem; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: #238636; color: #fff; }
+        .btn-primary:hover { background: #2ea043; }
+        .btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+
+        /* Steps */
+        .steps { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .step { flex: 1; padding: 0.5rem; text-align: center; background: #21262d; border-radius: 6px; font-size: 0.85rem; }
+        .step.active { background: #1f6feb; color: #fff; }
+        .step.done { background: #238636; color: #fff; }
+
+        /* Chat */
+        .chat-container { height: 400px; overflow-y: auto; border: 1px solid #30363d; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; background: #0d1117; }
+        .message { margin-bottom: 1rem; padding: 0.75rem; border-radius: 6px; }
+        .message.agent { background: #161b22; border-left: 3px solid #58a6ff; }
+        .message.user { background: #1c2128; border-left: 3px solid #238636; }
+        .message pre { white-space: pre-wrap; font-size: 0.9rem; }
+
+        /* Status */
+        .status { padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; }
+        .status.success { background: #0d2818; border: 1px solid #238636; color: #3fb950; }
+        .status.error { background: #2d1117; border: 1px solid #f85149; color: #f85149; }
+        .status.info { background: #0c2d6b; border: 1px solid #1f6feb; color: #58a6ff; }
+
+        .phase-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600; font-size: 0.85rem; }
+        .phase-1 { background: #f8514933; color: #f85149; }
+        .phase-2 { background: #d2992233; color: #d29922; }
+        .phase-3 { background: #58a6ff33; color: #58a6ff; }
+        .phase-4 { background: #3fb95033; color: #3fb950; }
+
+        .hidden { display: none; }
+        .loading { text-align: center; padding: 2rem; color: #8b949e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ ASMMv2</h1>
+        <p class="subtitle">AWS Security Maturity Model v2 - Assessment Agent</p>
+
+        <div class="steps">
+            <div class="step" id="step1">1. Login</div>
+            <div class="step" id="step2">2. Credenciales</div>
+            <div class="step" id="step3">3. Validación</div>
+            <div class="step" id="step4">4. Análisis</div>
+            <div class="step" id="step5">5. Resultados</div>
+        </div>
+
+        <!-- Step 1: Login Cognito -->
+        <div class="card" id="login-section">
+            <h2>Iniciar Sesión</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="usuario@empresa.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" onclick="login()">Ingresar</button>
+        </div>
+
+        <!-- Step 2: Upload CSV -->
+        <div class="card hidden" id="credentials-section">
+            <h2>Credenciales AWS (Solo Lectura)</h2>
+            <p style="color:#8b949e; margin-bottom:1rem;">Sube el CSV de un usuario IAM con permisos ReadOnlyAccess o SecurityAudit únicamente.</p>
+            <div class="form-group">
+                <label>Archivo CSV de credenciales</label>
+                <input type="file" id="csv-file" accept=".csv">
+            </div>
+            <p style="color:#8b949e; margin-bottom:1rem;">— o ingresa manualmente —</p>
+            <div class="form-group">
+                <label>Access Key ID</label>
+                <input type="text" id="access-key" placeholder="AKIA...">
+            </div>
+            <div class="form-group">
+                <label>Secret Access Key</label>
+                <input type="password" id="secret-key" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" onclick="validateCredentials()">Validar y Continuar</button>
+        </div>
+
+        <!-- Step 3-4: Validation & Assessment -->
+        <div class="card hidden" id="processing-section">
+            <h2>Procesando...</h2>
+            <div id="processing-status"></div>
+        </div>
+
+        <!-- Step 5: Chat Results -->
+        <div class="card hidden" id="results-section">
+            <h2>Resultados del Assessment</h2>
+            <div id="phase-display" style="margin-bottom:1rem;"></div>
+            <div class="chat-container" id="chat-container"></div>
+            <div style="display:flex; gap:0.5rem;">
+                <input type="text" id="chat-input" placeholder="Haz una pregunta sobre tu seguridad..." style="flex:1; padding:0.75rem; background:#0d1117; border:1px solid #30363d; border-radius:6px; color:#c9d1d9;">
+                <button class="btn btn-primary" onclick="sendMessage()">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Config - actualizar con valores del stack desplegado
+        const CONFIG = {
+            cognitoUserPoolId: '',
+            cognitoClientId: '',
+            validationApiUrl: '',
+            assessmentApiUrl: '',
+            agentApiUrl: ''
+        };
+
+        let currentStep = 1;
+        let authToken = '';
+        let credentials = { access_key: '', secret_key: '' };
+
+        function setStep(step) {
+            currentStep = step;
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`step${i}`);
+                el.className = 'step' + (i === step ? ' active' : '') + (i < step ? ' done' : '');
+            }
+        }
+
+        function login() {
+            // TODO: Integrar con Cognito SDK
+            setStep(2);
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('credentials-section').classList.remove('hidden');
+        }
+
+        document.getElementById('csv-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const lines = ev.target.result.split('\n');
+                if (lines.length >= 2) {
+                    const values = lines[1].split(',');
+                    document.getElementById('access-key').value = values[2] || '';
+                    document.getElementById('secret-key').value = values[3] || '';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        async function validateCredentials() {
+            credentials.access_key = document.getElementById('access-key').value;
+            credentials.secret_key = document.getElementById('secret-key').value;
+
+            if (!credentials.access_key || !credentials.secret_key) {
+                alert('Ingresa las credenciales');
+                return;
+            }
+
+            setStep(3);
+            document.getElementById('credentials-section').classList.add('hidden');
+            document.getElementById('processing-section').classList.remove('hidden');
+
+            const status = document.getElementById('processing-status');
+            status.innerHTML = '<div class="status info">⏳ Validando credenciales...</div>';
+
+            try {
+                const resp = await fetch(`${CONFIG.validationApiUrl}/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(credentials)
+                });
+                const data = await resp.json();
+
+                if (!data.is_readonly) {
+                    status.innerHTML = '<div class="status error">❌ BLOQUEADO: Las credenciales tienen permisos más allá de lectura. Use un usuario con solo ReadOnlyAccess.</div>';
+                    return;
+                }
+
+                status.innerHTML += '<div class="status success">✅ Credenciales válidas - Solo lectura confirmado</div>';
+                await runAssessment(status);
+            } catch (e) {
+                status.innerHTML = `<div class="status error">❌ Error: ${e.message}</div>`;
+            }
+        }
+
+        async function runAssessment(status) {
+            setStep(4);
+            status.innerHTML += '<div class="status info">⏳ Ejecutando análisis de seguridad...</div>';
+
+            const sectors = ['assess-iam', 'assess-logging', 'assess-detection'];
+            const results = [];
+
+            for (const sector of sectors) {
+                status.innerHTML += `<div class="status info">🔍 Analizando: ${sector}...</div>`;
+                try {
+                    const resp = await fetch(`${CONFIG.assessmentApiUrl}/${sector}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(credentials)
+                    });
+                    results.push(await resp.json());
+                } catch (e) {
+                    results.push({ sector, error: e.message, findings: [] });
+                }
+            }
+
+            status.innerHTML += '<div class="status info">🤖 Generando recomendaciones con IA...</div>';
+
+            try {
+                const resp = await fetch(`${CONFIG.agentApiUrl}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assessment_results: results })
+                });
+                const agentData = await resp.json();
+                showResults(agentData);
+            } catch (e) {
+                status.innerHTML += `<div class="status error">❌ Error del agente: ${e.message}</div>`;
+            }
+        }
+
+        function showResults(data) {
+            setStep(5);
+            document.getElementById('processing-section').classList.add('hidden');
+            document.getElementById('results-section').classList.remove('hidden');
+
+            const phaseLevel = data.phase_info?.level || 1;
+            document.getElementById('phase-display').innerHTML = `
+                <span class="phase-badge phase-${phaseLevel}">Fase ${phaseLevel}: ${data.phase_info?.name || 'Quick Wins'}</span>
+                <span style="margin-left:1rem; color:#8b949e;">Findings: ${data.total_findings} | Críticos: ${data.critical_count} | Altos: ${data.high_count}</span>
+            `;
+
+            addMessage('agent', data.agent_response);
+        }
+
+        function addMessage(type, text) {
+            const chat = document.getElementById('chat-container');
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `<pre>${text}</pre>`;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const question = input.value.trim();
+            if (!question) return;
+
+            addMessage('user', question);
+            input.value = '';
+
+            try {
+                const resp = await fetch(`${CONFIG.agentApiUrl}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, assessment_results: [] })
+                });
+                const data = await resp.json();
+                addMessage('agent', data.agent_response);
+            } catch (e) {
+                addMessage('agent', `Error: ${e.message}`);
+            }
+        }
+
+        document.getElementById('chat-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        setStep(1);
+    </script>
+</body>
+</html>
