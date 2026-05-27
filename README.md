@@ -31,9 +31,38 @@ AWS-ToolKit101/
 ├── IA/
 │   └── README.md                           ← Coming soon
 └── Secure/
-    └── README.md                           ← Coming soon
+    └── ASMMv2/                             ← AWS Security Maturity Model v2 Agent
+        ├── README.md
+        ├── deploy.sh
+        ├── frontend/
+        │   └── index.html
+        ├── lambdas/
+        │   ├── validation/
+        │   ├── assessment/
+        │   └── agent/
+        ├── stack-1-auth/
+        ├── stack-2-frontend/
+        ├── stack-3-validation/
+        ├── stack-4-assessment/
+        └── stack-5-agent/
 ```
 
 ---
 
-> 🚧 **IA and Secure modules** are currently under development. Templates, playbooks, and practical guides for each module will be released soon.
+## 4. Modules
+
+### Data — Data Processing
+ETL pipeline using AWS Glue, S3, and CloudFormation. Processes JSON data with PySpark.
+
+### Secure — ASMMv2 (AWS Security Maturity Model v2 Agent)
+Serverless AI agent with interactive web UI that assesses AWS account security posture against the [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/). Features:
+- Cognito authentication
+- Read-only credential validation (blocks write access)
+- Automated security assessment (IAM, Logging, Detection)
+- AI-powered recommendations via Bedrock AgentCore
+- Interactive chat showing maturity phase + critical recommendations with links to the official model
+- 5 CloudFormation stacks, 100% serverless
+
+---
+
+> 🚧 **IA module** is currently under development. Templates, playbooks, and practical guides will be released soon.
