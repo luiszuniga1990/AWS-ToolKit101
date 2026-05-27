@@ -79,30 +79,36 @@ El usuario se autentica, sube credenciales de solo lectura, el sistema valida qu
 
 ```
 Secure/ASMMv2/
-├── stack-1-auth.yaml              ← Cognito (User Pool, Client, Identity Pool)
-├── README-stack-1-auth.md
-├── stack-2-frontend.yaml          ← S3 + CloudFront
-├── README-stack-2-frontend.md
-├── stack-3-validation.yaml        ← 3 Lambdas validación + API Gateway
-├── README-stack-3-validation.md
-├── stack-4-assessment.yaml        ← 3 Lambdas assessment + API Gateway
-├── README-stack-4-assessment.md
-├── stack-5-agent.yaml             ← Bedrock AgentCore + KB + API Gateway
-├── README-stack-5-agent.md
-├── deploy.sh                      ← Script de despliegue completo
+├── stack-1-auth/
+│   ├── stack-1-auth.yaml          ← Cognito (User Pool, Client, Identity Pool)
+│   └── README.md
+├── stack-2-frontend/
+│   ├── stack-2-frontend.yaml      ← S3 + CloudFront
+│   └── README.md
+├── stack-3-validation/
+│   ├── stack-3-validation.yaml    ← 3 Lambdas validación + API Gateway
+│   └── README.md
+├── stack-4-assessment/
+│   ├── stack-4-assessment.yaml    ← 3 Lambdas assessment + API Gateway
+│   └── README.md
+├── stack-5-agent/
+│   ├── stack-5-agent.yaml         ← Bedrock AgentCore + KB + API Gateway
+│   └── README.md
 ├── frontend/
 │   └── index.html                 ← SPA (interfaz web)
-└── lambdas/
-    ├── validation/
-    │   ├── validate_credentials.py
-    │   ├── validate_readonly.py
-    │   └── validate_connection.py
-    ├── assessment/
-    │   ├── assess_iam.py
-    │   ├── assess_logging.py
-    │   └── assess_detection.py
-    └── agent/
-        └── agent_orchestrator.py
+├── lambdas/
+│   ├── validation/
+│   │   ├── validate_credentials.py
+│   │   ├── validate_readonly.py
+│   │   └── validate_connection.py
+│   ├── assessment/
+│   │   ├── assess_iam.py
+│   │   ├── assess_logging.py
+│   │   └── assess_detection.py
+│   └── agent/
+│       └── agent_orchestrator.py
+├── deploy.sh                      ← Script de despliegue completo
+└── README.md                      ← Este archivo
 ```
 
 ## Orden de Despliegue

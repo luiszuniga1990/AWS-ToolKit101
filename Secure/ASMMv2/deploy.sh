@@ -17,7 +17,7 @@ echo "========================================="
 echo ""
 echo ">>> Deploying Stack 1: Auth (Cognito)..."
 aws cloudformation deploy \
-  --template-file stack-1-auth.yaml \
+  --template-file stack-1-auth/stack-1-auth.yaml \
   --stack-name "${STACK_PREFIX}-auth" \
   --parameter-overrides ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} \
   --capabilities CAPABILITY_NAMED_IAM \
@@ -27,7 +27,7 @@ aws cloudformation deploy \
 echo ""
 echo ">>> Deploying Stack 2: Frontend (S3 + CloudFront)..."
 aws cloudformation deploy \
-  --template-file stack-2-frontend.yaml \
+  --template-file stack-2-frontend/stack-2-frontend.yaml \
   --stack-name "${STACK_PREFIX}-frontend" \
   --parameter-overrides ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} \
   --region ${REGION}
@@ -36,13 +36,13 @@ aws cloudformation deploy \
 echo ""
 echo ">>> Deploying Stack 3: Validation Lambdas..."
 aws cloudformation package \
-  --template-file stack-3-validation.yaml \
+  --template-file stack-3-validation/stack-3-validation.yaml \
   --s3-bucket "${STACK_PREFIX}-deploy-artifacts" \
-  --output-template-file stack-3-validation-packaged.yaml \
+  --output-template-file stack-3-validation/stack-3-validation-packaged.yaml \
   --region ${REGION}
 
 aws cloudformation deploy \
-  --template-file stack-3-validation-packaged.yaml \
+  --template-file stack-3-validation/stack-3-validation-packaged.yaml \
   --stack-name "${STACK_PREFIX}-validation" \
   --parameter-overrides ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} \
   --capabilities CAPABILITY_IAM \
@@ -52,13 +52,13 @@ aws cloudformation deploy \
 echo ""
 echo ">>> Deploying Stack 4: Assessment Lambdas..."
 aws cloudformation package \
-  --template-file stack-4-assessment.yaml \
+  --template-file stack-4-assessment/stack-4-assessment.yaml \
   --s3-bucket "${STACK_PREFIX}-deploy-artifacts" \
-  --output-template-file stack-4-assessment-packaged.yaml \
+  --output-template-file stack-4-assessment/stack-4-assessment-packaged.yaml \
   --region ${REGION}
 
 aws cloudformation deploy \
-  --template-file stack-4-assessment-packaged.yaml \
+  --template-file stack-4-assessment/stack-4-assessment-packaged.yaml \
   --stack-name "${STACK_PREFIX}-assessment" \
   --parameter-overrides ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} \
   --capabilities CAPABILITY_IAM \
@@ -68,13 +68,13 @@ aws cloudformation deploy \
 echo ""
 echo ">>> Deploying Stack 5: Agent (Bedrock)..."
 aws cloudformation package \
-  --template-file stack-5-agent.yaml \
+  --template-file stack-5-agent/stack-5-agent.yaml \
   --s3-bucket "${STACK_PREFIX}-deploy-artifacts" \
-  --output-template-file stack-5-agent-packaged.yaml \
+  --output-template-file stack-5-agent/stack-5-agent-packaged.yaml \
   --region ${REGION}
 
 aws cloudformation deploy \
-  --template-file stack-5-agent-packaged.yaml \
+  --template-file stack-5-agent/stack-5-agent-packaged.yaml \
   --stack-name "${STACK_PREFIX}-agent" \
   --parameter-overrides ProjectName=${PROJECT_NAME} Environment=${ENVIRONMENT} \
   --capabilities CAPABILITY_NAMED_IAM \
