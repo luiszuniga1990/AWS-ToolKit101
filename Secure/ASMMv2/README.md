@@ -64,7 +64,7 @@ El usuario se autentica, sube credenciales de solo lectura, el sistema valida qu
 │                          └──────┬───────┘└──────┬──────┘      ▼            │
 │                                 │               │      ┌─────────────┐     │
 │                                 ▼               ▼      │   Bedrock   │     │
-│                          ┌────────────────────────┐    │  (Claude)   │     │
+│                          ┌────────────────────────┐    │ (Nova Pro)  │     │
 │                          │  Cuenta AWS Target     │    └──────┬──────┘     │
 │                          │  (Read-Only Access)    │           │            │
 │                          └────────────────────────┘    ┌──────┴──────┐     │
@@ -150,11 +150,11 @@ cd Secure/ASMMv2
 | CloudFront | Distribución | ~$1.00 | 1M requests/mes tier gratuito |
 | API Gateway | 3 APIs HTTP | ~$1.00 | $1/millón de requests |
 | Lambda | 7 funciones | ~$0.00 | 1M requests gratis/mes |
-| Bedrock | Claude invocaciones | ~$5.00 - $30.00 | Depende del uso (~1000 assessments) |
+| Bedrock | Nova Pro invocaciones | ~$3.00 - $20.00 | Depende del uso (~1000 assessments) |
 | S3 | KB Bucket | ~$0.02 | Documentos del modelo < 100MB |
 | **TOTAL** | | **~$7.52 - $32.52** | **Uso moderado** |
 
-> **Nota**: Los costos de Bedrock varían según el modelo y volumen. Claude Sonnet: ~$3/1M input tokens, ~$15/1M output tokens. Para uso bajo (< 100 assessments/mes) el costo de Bedrock será ~$5. El free tier de AWS cubre la mayoría de los otros servicios durante los primeros 12 meses.
+> **Nota**: Los costos de Bedrock varían según el modelo y volumen. Nova Pro: ~$0.80/1M input tokens, ~$3.20/1M output tokens. Para uso bajo (< 100 assessments/mes) el costo de Bedrock será ~$3. El free tier de AWS cubre la mayoría de los otros servicios durante los primeros 12 meses.
 
 ## Referencias
 

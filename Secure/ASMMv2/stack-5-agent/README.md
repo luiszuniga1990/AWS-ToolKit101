@@ -27,7 +27,7 @@ Stack del agente de IA que recibe los resultados del assessment, los evalúa con
 │                                    │               ▼       │ │
 │                                    │  ┌─────────────────┐  │ │
 │                                    │  │ Bedrock Model   │  │ │
-│                                    │  │ (Claude)        │  │ │
+│                                    │  │ (Nova Pro)      │  │ │
 │                                    │  └─────────────────┘  │ │
 │                                    │               │       │ │
 │                                    │               ▼       │ │
