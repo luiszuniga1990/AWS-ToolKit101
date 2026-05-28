@@ -2,49 +2,49 @@
 
 ## Business Case
 
-Las organizaciones que operan en AWS enfrentan un desafío creciente: evaluar y mejorar su postura de seguridad de forma continua sin depender de consultorías externas costosas ni auditorías manuales que consumen semanas.
+Organizations operating on AWS face a growing challenge: continuously assessing and improving their security posture without relying on expensive external consultancies or manual audits that take weeks.
 
-**ASMMv2** resuelve esto proporcionando un assessment automatizado e inteligente basado en el framework oficial [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/), entregando en minutos lo que tradicionalmente toma días:
+**ASMMv2** solves this by providing an automated, intelligent assessment based on the official [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/) framework, delivering in minutes what traditionally takes days:
 
-| Problema | Solución ASMMv2 |
+| Problem | ASMMv2 Solution |
 |---|---|
-| Auditorías manuales costosas ($5K-$50K) | Assessment automatizado por ~$7-32/mes |
-| Semanas de espera por resultados | Resultados en minutos |
-| Recomendaciones genéricas | Recomendaciones específicas a tu cuenta, priorizadas por criticidad |
-| Sin visibilidad de madurez | Clasificación clara por fase del modelo oficial AWS |
-| Requiere expertise en seguridad | Agente IA que explica en lenguaje claro con links de referencia |
+| Expensive manual audits ($5K–$50K) | Automated assessment for ~$7–32/month |
+| Weeks waiting for results | Results in minutes |
+| Generic recommendations | Account-specific recommendations prioritized by criticality |
+| No maturity visibility | Clear classification by phase from the official AWS model |
+| Requires security expertise | AI agent that explains in plain language with reference links |
 
-**Público objetivo**: Equipos de DevOps, Cloud Engineers, CISOs y startups que necesitan visibilidad inmediata de su postura de seguridad AWS sin inversión en herramientas enterprise.
+**Target Audience**: DevOps teams, Cloud Engineers, CISOs, and startups that need immediate visibility into their AWS security posture without investing in enterprise tools.
 
-**Diferenciador**: 100% serverless, zero-trust (solo lectura), basado en el framework oficial de AWS, y con interfaz conversacional que guía al usuario paso a paso.
+**Differentiator**: 100% serverless, zero-trust (read-only), based on the official AWS framework, and with a conversational interface that guides the user step by step.
 
 ---
 
-## Resumen Técnico
+## Technical Overview
 
-Agente de IA serverless con interfaz web interactiva que analiza la postura de seguridad de una cuenta AWS y genera recomendaciones basadas en el [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/).
+Serverless AI agent with an interactive web interface that analyzes the security posture of an AWS account and generates recommendations based on the [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/).
 
-El usuario se autentica, sube credenciales de solo lectura, el sistema valida que no tengan permisos de escritura, ejecuta un assessment de seguridad, y presenta resultados en un chat interactivo indicando la fase de madurez y recomendaciones críticas con links al modelo oficial.
+The user authenticates, submits read-only credentials, the system validates they have no write permissions, runs a security assessment, and presents results in an interactive chat indicating the maturity phase and critical recommendations with links to the official model.
 
-## Componentes
+## Components
 
-| Componente | Servicio AWS | Descripción |
+| Component | AWS Service | Description |
 |---|---|---|
-| Autenticación | Amazon Cognito | Login de usuarios web |
-| Frontend | S3 + CloudFront | SPA interactiva con chat |
-| Validación | Lambda + API Gateway | Verifica credenciales y permisos read-only |
-| Assessment | Lambda + API Gateway | Análisis de IAM, Logging, Detection |
-| Agente IA | Bedrock + Lambda | Genera recomendaciones con IA |
-| Knowledge Base | S3 | Documentos del Security Maturity Model v2 |
+| Authentication | Amazon Cognito | Web user login |
+| Frontend | S3 + CloudFront | Interactive SPA with chat |
+| Validation | Lambda + API Gateway | Verifies credentials and read-only permissions |
+| Assessment | Lambda + API Gateway | IAM, Logging, Detection analysis |
+| AI Agent | Bedrock + Lambda | Generates AI-powered recommendations |
+| Knowledge Base | S3 | Security Maturity Model v2 documents |
 
-## Diagrama General
+## Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ASMMv2 - Arquitectura                             │
+│                           ASMMv2 - Architecture                              │
 │                                                                             │
 │  ┌──────────┐    ┌───────────┐    ┌────────────────────────────────────┐    │
-│  │ Usuario  │───▶│  Cognito  │───▶│         CloudFront + S3            │    │
+│  │   User   │───▶│  Cognito  │───▶│         CloudFront + S3            │    │
 │  └──────────┘    │  (Auth)   │    │         (Frontend SPA)             │    │
 │                  └───────────┘    └──────────────┬─────────────────────┘    │
 │                                                  │                          │
@@ -65,7 +65,7 @@ El usuario se autentica, sube credenciales de solo lectura, el sistema valida qu
 │                                 │               │      ┌─────────────┐     │
 │                                 ▼               ▼      │   Bedrock   │     │
 │                          ┌────────────────────────┐    │ (Nova Pro)  │     │
-│                          │  Cuenta AWS Target     │    └──────┬──────┘     │
+│                          │  Target AWS Account    │    └──────┬──────┘     │
 │                          │  (Read-Only Access)    │           │            │
 │                          └────────────────────────┘    ┌──────┴──────┐     │
 │                                                        │  S3 KB Docs │     │
@@ -75,7 +75,7 @@ El usuario se autentica, sube credenciales de solo lectura, el sistema valida qu
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Estructura del Proyecto (Árbol CloudFormation)
+## Project Structure (CloudFormation Tree)
 
 ```
 Secure/ASMMv2/
@@ -86,16 +86,16 @@ Secure/ASMMv2/
 │   ├── stack-2-frontend.yaml      ← S3 + CloudFront
 │   └── README.md
 ├── stack-3-validation/
-│   ├── stack-3-validation.yaml    ← 3 Lambdas validación + API Gateway
+│   ├── stack-3-validation.yaml    ← 3 validation Lambdas + API Gateway
 │   └── README.md
 ├── stack-4-assessment/
-│   ├── stack-4-assessment.yaml    ← 3 Lambdas assessment + API Gateway
+│   ├── stack-4-assessment.yaml    ← 3 assessment Lambdas + API Gateway
 │   └── README.md
 ├── stack-5-agent/
 │   ├── stack-5-agent.yaml         ← Bedrock AgentCore + KB + API Gateway
 │   └── README.md
 ├── frontend/
-│   └── index.html                 ← SPA (interfaz web)
+│   └── index.html                 ← SPA (web interface)
 ├── lambdas/
 │   ├── validation/
 │   │   ├── validate_credentials.py
@@ -107,56 +107,56 @@ Secure/ASMMv2/
 │   │   └── assess_detection.py
 │   └── agent/
 │       └── agent_orchestrator.py
-├── deploy.sh                      ← Script de despliegue completo
-└── README.md                      ← Este archivo
+├── deploy.sh                      ← Full deployment script
+└── README.md                      ← This file
 ```
 
-## Orden de Despliegue
+## Deployment Order
 
 ```
 Stack 1 (Auth) → Stack 2 (Frontend) → Stack 3 (Validation) → Stack 4 (Assessment) → Stack 5 (Agent)
 ```
 
-Los stacks exportan outputs que los siguientes pueden consumir via `Fn::ImportValue`.
+Stacks export outputs that subsequent stacks consume via `Fn::ImportValue`.
 
-## Deploy Step by Step (Completo)
+## Full Deployment
 
 ```bash
-# Prerrequisitos
-# - AWS CLI configurado
-# - Permisos para crear: Cognito, S3, CloudFront, Lambda, API Gateway, IAM, Bedrock
+# Prerequisites
+# - AWS CLI configured
+# - Permissions to create: Cognito, S3, CloudFront, Lambda, API Gateway, IAM, Bedrock
 
-# 1. Configurar variables
+# 1. Set variables
 export PROJECT_NAME=asmmv2
 export ENVIRONMENT=dev
 export AWS_REGION=us-east-1
 
-# 2. Crear bucket de artifacts
+# 2. Create artifacts bucket
 aws s3 mb "s3://${PROJECT_NAME}-${ENVIRONMENT}-deploy-artifacts" --region $AWS_REGION
 
-# 3. Ejecutar deploy completo
+# 3. Run full deployment
 cd Secure/ASMMv2
 ./deploy.sh
 
-# O desplegar stack por stack (ver README de cada stack)
+# Or deploy stack by stack (see each stack's README)
 ```
 
-## Tabla de Costos Promedio (Mensual - USD)
+## Estimated Monthly Cost (USD)
 
-| Servicio | Recurso | Costo Estimado | Notas |
+| Service | Resource | Estimated Cost | Notes |
 |---|---|---|---|
-| Cognito | User Pool | ~$0.00 | Gratis hasta 50,000 MAU |
-| S3 | Frontend Bucket | ~$0.50 | Hosting estático < 1GB |
-| CloudFront | Distribución | ~$1.00 | 1M requests/mes tier gratuito |
-| API Gateway | 3 APIs HTTP | ~$1.00 | $1/millón de requests |
-| Lambda | 7 funciones | ~$0.00 | 1M requests gratis/mes |
-| Bedrock | Nova Pro invocaciones | ~$3.00 - $20.00 | Depende del uso (~1000 assessments) |
-| S3 | KB Bucket | ~$0.02 | Documentos del modelo < 100MB |
-| **TOTAL** | | **~$7.52 - $32.52** | **Uso moderado** |
+| Cognito | User Pool | ~$0.00 | Free up to 50,000 MAU |
+| S3 | Frontend Bucket | ~$0.50 | Static hosting < 1GB |
+| CloudFront | Distribution | ~$1.00 | 1M requests/month free tier |
+| API Gateway | 3 HTTP APIs | ~$1.00 | $1/million requests |
+| Lambda | 7 functions | ~$0.00 | 1M requests free/month |
+| Bedrock | Nova Pro invocations | ~$3.00 - $20.00 | Depends on usage (~1000 assessments) |
+| S3 | KB Bucket | ~$0.02 | Model documents < 100MB |
+| **TOTAL** | | **~$7.52 - $32.52** | **Moderate usage** |
 
-> **Nota**: Los costos de Bedrock varían según el modelo y volumen. Nova Pro: ~$0.80/1M input tokens, ~$3.20/1M output tokens. Para uso bajo (< 100 assessments/mes) el costo de Bedrock será ~$3. El free tier de AWS cubre la mayoría de los otros servicios durante los primeros 12 meses.
+> **Note**: Bedrock costs vary by model and volume. Nova Pro: ~$0.80/1M input tokens, ~$3.20/1M output tokens. For low usage (< 100 assessments/month) the Bedrock cost will be ~$3. The AWS free tier covers most other services during the first 12 months.
 
-## Referencias
+## References
 
 - [AWS Security Maturity Model v2](https://maturitymodel.security.aws.dev/en/model/)
 - [Amazon Bedrock](https://aws.amazon.com/bedrock/)

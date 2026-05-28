@@ -1,18 +1,18 @@
 # Stack 4: Assessment Lambdas
 
-## Resumen
-Stack serverless con 3 funciones Lambda que ejecutan el análisis de seguridad de la cuenta AWS. Cada Lambda cubre un sector del AWS Security Maturity Model v2: Identity, Logging y Detection.
+## Overview
+Serverless stack with 3 Lambda functions that perform the AWS account security analysis. Each Lambda covers a sector of the AWS Security Maturity Model v2: Identity, Logging, and Detection.
 
-## Componentes
+## Components
 
-| Recurso | Tipo | Descripción |
+| Resource | Type | Description |
 |---|---|---|
-| AssessmentApi | API Gateway HTTP | Endpoint para análisis |
-| AssessIamFunction | Lambda | Analiza IAM: MFA, access keys, root, password policy |
-| AssessLoggingFunction | Lambda | Analiza CloudTrail, Config, CloudWatch |
-| AssessDetectionFunction | Lambda | Analiza GuardDuty, Security Hub |
+| AssessmentApi | API Gateway HTTP | Assessment endpoint |
+| AssessIamFunction | Lambda | Analyzes IAM: MFA, access keys, root, password policy |
+| AssessLoggingFunction | Lambda | Analyzes CloudTrail, Config, CloudWatch |
+| AssessDetectionFunction | Lambda | Analyzes GuardDuty, Security Hub |
 
-## Diagrama
+## Diagram
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@ Stack serverless con 3 funciones Lambda que ejecutan el análisis de seguridad d
 │                        │           │             │              │
 │                        ▼           ▼             ▼              │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │            Cuenta AWS del usuario (read-only)           │   │
+│  │          User's AWS Account (read-only)                 │   │
 │  │  IAM │ CloudTrail │ Config │ CloudWatch │ GuardDuty │ SH│   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                                                                │
@@ -40,22 +40,22 @@ Stack serverless con 3 funciones Lambda que ejecutan el análisis de seguridad d
 └────────────────────────────────────────────────────────────────┘
 ```
 
-## Deploy Step by Step
+## Deployment
 
 ```bash
-# 1. Configurar variables
+# 1. Set variables
 export PROJECT_NAME=asmmv2
 export ENVIRONMENT=dev
 export REGION=us-east-1
 
-# 2. Empaquetar Lambdas
+# 2. Package Lambdas
 aws cloudformation package \
   --template-file stack-4-assessment.yaml \
   --s3-bucket "${PROJECT_NAME}-${ENVIRONMENT}-deploy-artifacts" \
   --output-template-file stack-4-assessment-packaged.yaml \
   --region $REGION
 
-# 3. Desplegar
+# 3. Deploy
 aws cloudformation deploy \
   --template-file stack-4-assessment-packaged.yaml \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-assessment" \
@@ -63,7 +63,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_IAM \
   --region $REGION
 
-# 4. Obtener API URL
+# 4. Get API URL
 aws cloudformation describe-stacks \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-assessment" \
   --query "Stacks[0].Outputs[?OutputKey=='AssessmentApiUrl'].OutputValue" \

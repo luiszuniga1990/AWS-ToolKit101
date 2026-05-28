@@ -1,18 +1,18 @@
 # Stack 5: Agent (Bedrock AgentCore)
 
-## Resumen
-Stack del agente de IA que recibe los resultados del assessment, los evalúa contra el AWS Security Maturity Model v2, y genera recomendaciones en formato chat interactivo con links al modelo oficial.
+## Overview
+AI agent stack that receives assessment results, evaluates them against the AWS Security Maturity Model v2, and generates recommendations in an interactive chat format with links to the official model.
 
-## Componentes
+## Components
 
-| Recurso | Tipo | Descripción |
+| Resource | Type | Description |
 |---|---|---|
-| KnowledgeBaseBucket | S3 Bucket | Documentos del Security Maturity Model v2 |
-| AgentRole | IAM Role | Rol del agente con permisos a Bedrock y S3 |
-| AgentOrchestratorFunction | Lambda | Orquesta el agente, invoca Bedrock |
-| AgentApi | API Gateway HTTP | Endpoint /chat para el frontend |
+| KnowledgeBaseBucket | S3 Bucket | Security Maturity Model v2 documents |
+| AgentRole | IAM Role | Agent role with Bedrock and S3 permissions |
+| AgentOrchestratorFunction | Lambda | Orchestrates the agent, invokes Bedrock |
+| AgentApi | API Gateway HTTP | /chat endpoint for the frontend |
 
-## Diagrama
+## Diagram
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -42,22 +42,22 @@ Stack del agente de IA que recibe los resultados del assessment, los evalúa con
 └──────────────────────────────────────────────────────────────┘
 ```
 
-## Deploy Step by Step
+## Deployment
 
 ```bash
-# 1. Configurar variables
+# 1. Set variables
 export PROJECT_NAME=asmmv2
 export ENVIRONMENT=dev
 export REGION=us-east-1
 
-# 2. Empaquetar Lambda
+# 2. Package Lambda
 aws cloudformation package \
   --template-file stack-5-agent.yaml \
   --s3-bucket "${PROJECT_NAME}-${ENVIRONMENT}-deploy-artifacts" \
   --output-template-file stack-5-agent-packaged.yaml \
   --region $REGION
 
-# 3. Desplegar
+# 3. Deploy
 aws cloudformation deploy \
   --template-file stack-5-agent-packaged.yaml \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-agent" \
@@ -65,7 +65,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region $REGION
 
-# 4. Subir documentos del Maturity Model al KB bucket
+# 4. Upload Maturity Model documents to KB bucket
 KB_BUCKET=$(aws cloudformation describe-stacks \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-agent" \
   --query "Stacks[0].Outputs[?OutputKey=='KnowledgeBaseBucketName'].OutputValue" \
@@ -73,7 +73,7 @@ KB_BUCKET=$(aws cloudformation describe-stacks \
 
 # aws s3 cp maturity-model-docs/ "s3://${KB_BUCKET}/" --recursive
 
-# 5. Obtener API URL
+# 5. Get API URL
 aws cloudformation describe-stacks \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-agent" \
   --query "Stacks[0].Outputs[?OutputKey=='AgentApiUrl'].OutputValue" \

@@ -1,17 +1,17 @@
 # Stack 1: Auth (Cognito)
 
-## Resumen
-Stack de autenticación que provisiona Amazon Cognito para gestionar el login de usuarios en la interfaz web de ASMMv2.
+## Overview
+Authentication stack that provisions Amazon Cognito to manage user login for the ASMMv2 web interface.
 
-## Componentes
+## Components
 
-| Recurso | Tipo | Descripción |
+| Resource | Type | Description |
 |---|---|---|
-| UserPool | Cognito User Pool | Pool de usuarios con verificación por email |
-| UserPoolClient | Cognito App Client | Cliente web (SRP auth, sin secret) |
-| IdentityPool | Cognito Identity Pool | Federación de identidades |
+| UserPool | Cognito User Pool | User pool with email verification |
+| UserPoolClient | Cognito App Client | Web client (SRP auth, no secret) |
+| IdentityPool | Cognito Identity Pool | Identity federation |
 
-## Diagrama
+## Diagram
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -33,15 +33,15 @@ Stack de autenticación que provisiona Amazon Cognito para gestionar el login de
 └─────────────────────────────────────────────┘
 ```
 
-## Deploy Step by Step
+## Deployment
 
 ```bash
-# 1. Configurar variables
+# 1. Set variables
 export PROJECT_NAME=asmmv2
 export ENVIRONMENT=dev
 export REGION=us-east-1
 
-# 2. Desplegar stack
+# 2. Deploy stack
 aws cloudformation deploy \
   --template-file stack-1-auth.yaml \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-auth" \
@@ -49,7 +49,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --region $REGION
 
-# 3. Obtener outputs
+# 3. Get outputs
 aws cloudformation describe-stacks \
   --stack-name "${PROJECT_NAME}-${ENVIRONMENT}-auth" \
   --query "Stacks[0].Outputs" --output table --region $REGION
